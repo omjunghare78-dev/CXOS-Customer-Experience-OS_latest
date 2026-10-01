@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "CXOS"
+description = "An AI customer experience operating system for understanding customer signals, explaining churn risk, and helping teams approve measurable service interventions using synthetic demo data."
+version = "1.0.0"
+id = "artifacts/cxos"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18433
+
+[services.development]
+run = "pnpm --filter @workspace/cxos run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/cxos", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/cxos/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18433"
+BASE_PATH = "/"

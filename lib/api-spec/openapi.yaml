@@ -3,20 +3,19 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: CXOS demo API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: cxos
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +23,417 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /cxos/overview:
+    get:
+      operationId: getCxosOverview
+      tags: [cxos]
+      summary: Get executive CX dashboard metrics
+      responses:
+        "200":
+          description: Dashboard metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Overview"
+  /cxos/customers:
+    get:
+      operationId: getCxosCustomers
+      tags: [cxos]
+      summary: List synthetic customers and their risk signals
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string, maxLength: 120 }
+        - name: risk
+          in: query
+          schema: { type: string, enum: [all, high, medium, low], default: all }
+      responses:
+        "200":
+          description: Customer list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Customer" }
+  /cxos/customers/{customerId}:
+    get:
+      operationId: getCxosCustomer
+      tags: [cxos]
+      summary: Get a customer profile and cross-channel timeline
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 80 }
+      responses:
+        "200":
+          description: Customer profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerProfile"
+        "404":
+          description: Customer not found
+  /cxos/customers/{customerId}/resolve:
+    post:
+      operationId: resolveCxosCustomer
+      tags: [cxos]
+      summary: Resolve one open issue in the synthetic demo workspace
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 80 }
+      responses:
+        "200":
+          description: Updated customer context
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CustomerProfile" }
+        "404":
+          description: Customer not found
+        "409":
+          description: No open issue is available to resolve
+  /cxos/customers/{customerId}/escalate:
+    post:
+      operationId: escalateCxosCustomer
+      tags: [cxos]
+      summary: Escalate a synthetic customer issue to a senior agent
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 80 }
+      responses:
+        "200":
+          description: Updated customer context
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CustomerProfile" }
+        "404":
+          description: Customer not found
+  /cxos/intelligence:
+    get:
+      operationId: getCxosIntelligence
+      tags: [cxos]
+      summary: Get sentiment, complaint, journey and voice-of-customer intelligence
+      responses:
+        "200":
+          description: CX intelligence summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Intelligence"
+  /cxos/actions:
+    get:
+      operationId: getCxosActions
+      tags: [cxos]
+      summary: List recommended actions awaiting human review
+      responses:
+        "200":
+          description: Recommended actions
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/RecommendedAction" }
+  /cxos/actions/{actionId}/decision:
+    post:
+      operationId: decideCxosAction
+      tags: [cxos]
+      summary: Approve, modify or reject a recommendation
+      parameters:
+        - name: actionId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 80 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ActionDecisionInput" }
+      responses:
+        "200":
+          description: Decision recorded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RecommendedAction" }
+        "404":
+          description: Action not found
+  /cxos/rescues/{customerId}/execute:
+    post:
+      operationId: executeCxosRescue
+      tags: [cxos]
+      summary: Execute the approved deterministic demo rescue plan
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 80 }
+      responses:
+        "200":
+          description: Rescue outcome
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RescueResult" }
+        "404":
+          description: Customer not found
+        "409":
+          description: Customer is not eligible for rescue
+  /cxos/copilot:
+    post:
+      operationId: askCxosCopilot
+      tags: [cxos]
+      summary: Ask the demo AI copilot a grounded CX question
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CopilotInput" }
+      responses:
+        "200":
+          description: Grounded answer
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CopilotAnswer" }
+  /cxos/audit:
+    get:
+      operationId: getCxosAudit
+      tags: [cxos]
+      summary: Get the immutable-style demo audit trail
+      responses:
+        "200":
+          description: Audit entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AuditEntry" }
+  /cxos/demo/reset:
+    post:
+      operationId: resetCxosDemo
+      tags: [cxos]
+      summary: Restore the synthetic CXOS demo to its initial state
+      responses:
+        "200":
+          description: Reset complete
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ResetResult" }
 components:
   schemas:
     HealthStatus:
       type: object
       properties:
-        status:
-          type: string
-      required:
-        - status
-
+        status: { type: string }
+      required: [status]
+    Customer:
+      type: object
+      required: [id, name, company, plan, lifetimeValue, health, churnProbability, sentiment, channel, issue, priority, lastContact, recommendation, riskFactors]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        company: { type: string }
+        plan: { type: string }
+        lifetimeValue: { type: number }
+        health: { type: integer }
+        churnProbability: { type: integer }
+        sentiment: { type: string }
+        channel: { type: string }
+        issue: { type: string }
+        priority: { type: string }
+        lastContact: { type: string }
+        recommendation: { type: string }
+        riskFactors:
+          type: array
+          items: { type: string }
+    Overview:
+      type: object
+      required: [healthScore, csat, nps, effortScore, churnRisk, openIssues, resolutionHours, aiResolutions, atRiskCustomers, weeklyTrend, healthFactors]
+      properties:
+        healthScore: { type: integer }
+        csat: { type: number }
+        nps: { type: integer }
+        effortScore: { type: number }
+        churnRisk: { type: integer }
+        openIssues: { type: integer }
+        resolutionHours: { type: number }
+        aiResolutions: { type: integer }
+        atRiskCustomers: { type: integer }
+        weeklyTrend:
+          type: array
+          items: { $ref: "#/components/schemas/TrendPoint" }
+        healthFactors:
+          type: array
+          items: { $ref: "#/components/schemas/HealthFactor" }
+    TrendPoint:
+      type: object
+      required: [day, sentiment, csat]
+      properties:
+        day: { type: string }
+        sentiment: { type: number }
+        csat: { type: number }
+    HealthFactor:
+      type: object
+      required: [label, value, change, direction]
+      properties:
+        label: { type: string }
+        value: { type: string }
+        change: { type: string }
+        direction: { type: string, enum: [up, down, neutral] }
+    TimelineEvent:
+      type: object
+      required: [id, type, channel, title, detail, date, sentiment]
+      properties:
+        id: { type: string }
+        type: { type: string }
+        channel: { type: string }
+        title: { type: string }
+        detail: { type: string }
+        date: { type: string }
+        sentiment: { type: string }
+    CustomerProfile:
+      type: object
+      required: [customer, summary, timeline, conversationCount]
+      properties:
+        customer: { $ref: "#/components/schemas/Customer" }
+        summary: { type: string }
+        timeline:
+          type: array
+          items: { $ref: "#/components/schemas/TimelineEvent" }
+        conversationCount: { type: integer }
+    Theme:
+      type: object
+      required: [name, share, trend, sentiment, count, examples, causes]
+      properties:
+        name: { type: string }
+        share: { type: integer }
+        trend: { type: integer }
+        sentiment: { type: string }
+        count: { type: integer }
+        examples:
+          type: array
+          items: { type: string }
+        causes:
+          type: array
+          items: { $ref: "#/components/schemas/RootCause" }
+    RootCause:
+      type: object
+      required: [label, confidence, evidence]
+      properties:
+        label: { type: string }
+        confidence: { type: integer }
+        evidence: { type: string }
+    JourneyStage:
+      type: object
+      required: [name, sentiment, friction, conversion, complaints, opportunity]
+      properties:
+        name: { type: string }
+        sentiment: { type: number }
+        friction: { type: integer }
+        conversion: { type: integer }
+        complaints: { type: integer }
+        opportunity: { type: string }
+    Review:
+      type: object
+      required: [source, quote, theme, sentiment, date]
+      properties:
+        source: { type: string }
+        quote: { type: string }
+        theme: { type: string }
+        sentiment: { type: string }
+        date: { type: string }
+    Intelligence:
+      type: object
+      required: [sentimentTrend, themes, journey, reviews, emotions]
+      properties:
+        sentimentTrend:
+          type: array
+          items: { $ref: "#/components/schemas/TrendPoint" }
+        themes:
+          type: array
+          items: { $ref: "#/components/schemas/Theme" }
+        journey:
+          type: array
+          items: { $ref: "#/components/schemas/JourneyStage" }
+        reviews:
+          type: array
+          items: { $ref: "#/components/schemas/Review" }
+        emotions:
+          type: array
+          items: { $ref: "#/components/schemas/EmotionShare" }
+    EmotionShare:
+      type: object
+      required: [emotion, share, color]
+      properties:
+        emotion: { type: string }
+        share: { type: integer }
+        color: { type: string }
+    RecommendedAction:
+      type: object
+      required: [id, severity, title, evidence, recommendation, impact, status, customerId, customerName]
+      properties:
+        id: { type: string }
+        severity: { type: string, enum: [critical, warning, opportunity] }
+        title: { type: string }
+        evidence: { type: string }
+        recommendation: { type: string }
+        impact: { type: string }
+        status: { type: string, enum: [pending, approved, modified, rejected, executed] }
+        customerId: { type: string }
+        customerName: { type: string }
+    ActionDecisionInput:
+      type: object
+      required: [decision]
+      properties:
+        decision: { type: string, enum: [approve, modify, reject] }
+        note: { type: string, maxLength: 300 }
+    RescueResult:
+      type: object
+      required: [customerId, customerName, previousHealth, health, previousSentiment, sentiment, steps, impact, auditId]
+      properties:
+        customerId: { type: string }
+        customerName: { type: string }
+        previousHealth: { type: integer }
+        health: { type: integer }
+        previousSentiment: { type: string }
+        sentiment: { type: string }
+        steps:
+          type: array
+          items: { type: string }
+        impact: { type: string }
+        auditId: { type: string }
+    CopilotInput:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string, minLength: 1, maxLength: 600 }
+    CopilotAnswer:
+      type: object
+      required: [answer, evidence, confidence, limitation]
+      properties:
+        answer: { type: string }
+        evidence:
+          type: array
+          items: { type: string }
+        confidence: { type: integer }
+        limitation: { type: string }
+    AuditEntry:
+      type: object
+      required: [id, actor, action, subject, detail, timestamp, category]
+      properties:
+        id: { type: string }
+        actor: { type: string }
+        action: { type: string }
+        subject: { type: string }
+        detail: { type: string }
+        timestamp: { type: string }
+        category: { type: string }
+    ResetResult:
+      type: object
+      required: [message, customers, conversations, feedback]
+      properties:
+        message: { type: string }
+        customers: { type: integer }
+        conversations: { type: integer }
+        feedback: { type: integer }
